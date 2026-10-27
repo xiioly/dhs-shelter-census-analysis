@@ -1,23 +1,31 @@
--- Convert MM/DD/YYYY text dates to ISO format
-CREATE VIEW dhs_clean AS
-SELECT substr("Date of Census",7,4) || '-' || substr("Date of Census",1,2) || '-' || substr("Date of Census",4,2) AS census_date,
-"Total Adults in Shelter" AS total_adults, "Total Children in Shelter" AS total_children,
-"Total Individuals in Shelter" AS total_individuals, "Single Adult Men in Shelter" AS single_men,
-"Single Adult Women in Shelter" AS single_women, "Total Single Adults in Shelter" AS total_single_adults,
-"Families with Children in Shelter" AS families_with_children
-FROM dhs_daily;
+# NYC DHS Shelter Census Analysis
 
--- Data quality: date range and duplicates
-SELECT COUNT(*) AS rows_total, COUNT(DISTINCT census_date) AS unique_dates, MIN(census_date), MAX(census_date) FROM dhs_clean;
+Analysis of daily shelter population counts from the NYC Department of Homeless Services (DHS) Daily Report, March 2021 to October 2026.
 
--- Data quality: nulls
-SELECT SUM(total_adults IS NULL), SUM(total_children IS NULL), SUM(total_individuals IS NULL), SUM(families_with_children IS NULL) FROM dhs_clean;
+## Data
+- Source: NYC Open Data, DHS Daily Report (https://data.cityofnewyork.us/d/k46n-sa2m)
+- 2,065 daily records, 13 columns (adults, children, single adults, families)
 
--- Data quality: totals reconcile
-SELECT COUNT(*) FROM dhs_clean WHERE total_adults + total_children <> total_individuals;
+## Process
+1. Loaded the CSV into SQLite (DB Browser for SQLite)
+2. Converted text dates (MM/DD/YYYY) to ISO format with a SQL view
+3. Ran data quality checks: no duplicate or missing dates, no null values, and totals reconcile on every row
+4. Aggregated yearly and monthly averages with SQL
+5. Built a Power BI dashboard of monthly trends
 
--- Yearly averages
-SELECT substr(census_date,1,4) AS year, COUNT(*) AS days, ROUND(AVG(total_individuals)) AS avg_individuals, MAX(total_individuals) AS peak_individuals, ROUND(AVG(total_children)) AS avg_children, ROUND(AVG(total_single_adults)) AS avg_single_adults FROM dhs_clean GROUP BY year ORDER BY year;
+## Key findings
+- Average daily individuals in shelter rose from 47,077 (2021) to 87,105 (2024), then declined to 84,072 (2026, through October)
+- Average children in shelter fell 12.2% from 2024 to 2026 (32,839 to 28,817)
+- Average single adults rose 25.2% from 2024 to 2026 (20,502 to 25,665)
 
--- Monthly averages (exported to monthly_trend.csv)
-SELECT substr(census_date,1,7) AS month, ROUND(AVG(total_individuals)) AS avg_individuals, ROUND(AVG(total_children)) AS avg_children, ROUND(AVG(total_single_adults)) AS avg_single_adults, ROUND(AVG(families_with_children)) AS avg_families FROM dhs_clean GROUP BY month ORDER BY month;
+## Notes
+- 2021 (March to December) and 2026 (January to October 25) are partial years
+- Counts are aggregate daily totals; no individual-level data is used
+
+## Files
+- `analysis.sql`: all queries
+- `monthly_trend.csv`: monthly averages used in the dashboard
+- `dashboard.png`, `dashboard_full.png`: Power BI report screenshots
+
+## Tools
+SQL (SQLite), Power BI
